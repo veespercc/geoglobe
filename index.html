@@ -3,19 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>GeoGlobe — Minimalist SaaS Edition</title>
+  <title>GeoGlobe 3D</title>
   
-  <!-- Three.js & Globe.gl -->
-  <script src="//unpkg.com/three"></script>
-  <script src="//unpkg.com/globe.gl"></script>
+  <!-- Только единый автономный бандл Globe.gl со строгим HTTPS -->
+  <script src="https://unpkg.com/globe.gl"></script>
 
   <style>
     :root {
       --bg: #090d16;
-      --card-bg: rgba(15, 23, 42, 0.75);
-      --card-border: rgba(255, 255, 255, 0.08);
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --card-border: rgba(255, 255, 255, 0.1);
       --accent: #38bdf8;
-      --accent-glow: rgba(56, 189, 248, 0.25);
+      --accent-glow: rgba(56, 189, 248, 0.2);
       --text-main: #f8fafc;
       --text-muted: #64748b;
       --success: #10b981;
@@ -48,7 +47,7 @@
       z-index: 1;
     }
 
-    /* Загрузочный экран с прогресс-баром */
+    /* Экран загрузки */
     .loader-screen {
       position: absolute;
       inset: 0;
@@ -59,7 +58,7 @@
       justify-content: center;
       z-index: 50;
       gap: 16px;
-      transition: opacity 0.4s ease;
+      transition: opacity 0.3s ease;
     }
 
     .loader-screen.fade-out {
@@ -68,9 +67,9 @@
     }
 
     .brand-title {
-      font-size: 1.2rem;
-      font-weight: 700;
-      letter-spacing: -0.03em;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
       color: #fff;
       display: flex;
       align-items: center;
@@ -82,11 +81,11 @@
       height: 8px;
       background: var(--accent);
       border-radius: 50%;
-      box-shadow: 0 0 10px var(--accent);
+      box-shadow: 0 0 12px var(--accent);
     }
 
     .progress-bar-wrap {
-      width: 200px;
+      width: 180px;
       height: 4px;
       background: rgba(255, 255, 255, 0.1);
       border-radius: 99px;
@@ -94,10 +93,10 @@
     }
 
     .progress-bar-fill {
-      width: 15%;
+      width: 20%;
       height: 100%;
       background: var(--accent);
-      transition: width 0.3s ease;
+      transition: width 0.25s ease;
     }
 
     .loader-status {
@@ -106,15 +105,15 @@
       font-weight: 500;
     }
 
-    /* Десктопный HUD (плавающий сверху) */
+    /* Адаптивный SaaS интерфейс */
     .hud-container {
       position: absolute;
-      top: 24px;
+      top: 20px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 10;
       width: calc(100% - 32px);
-      max-width: 440px;
+      max-width: 420px;
       pointer-events: none;
     }
 
@@ -123,9 +122,9 @@
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 16px 20px;
-      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
       pointer-events: auto;
       display: flex;
       flex-direction: column;
@@ -151,7 +150,7 @@
     }
 
     .region-select {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.06);
       border: 1px solid var(--card-border);
       color: #94a3b8;
       font-size: 0.75rem;
@@ -163,7 +162,7 @@
     }
 
     .target-title {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       font-weight: 800;
       letter-spacing: -0.03em;
       color: #fff;
@@ -173,8 +172,8 @@
     .metrics-row {
       display: flex;
       justify-content: space-between;
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.03);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.04);
       padding: 8px 14px;
       border-radius: 12px;
     }
@@ -204,7 +203,7 @@
 
     .btn-secondary {
       flex: 1;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.06);
       border: 1px solid var(--card-border);
       color: #cbd5e1;
       font-size: 0.75rem;
@@ -212,24 +211,24 @@
       padding: 8px 12px;
       border-radius: 10px;
       cursor: pointer;
-      transition: all 0.15s;
+      transition: background 0.15s;
     }
 
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.12);
       color: #fff;
     }
 
-    /* Оповещения / Toast */
+    /* Мобильный Toast */
     .toast-pill {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%) scale(0.9);
-      background: rgba(15, 23, 42, 0.92);
+      background: rgba(15, 23, 42, 0.95);
       backdrop-filter: blur(16px);
       border: 1px solid var(--card-border);
-      padding: 12px 20px;
+      padding: 12px 18px;
       border-radius: 14px;
       display: flex;
       align-items: center;
@@ -239,7 +238,7 @@
       pointer-events: none;
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       max-width: 90vw;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
     }
 
     .toast-pill.show {
@@ -267,7 +266,6 @@
       cursor: pointer;
     }
 
-    /* Мобильный Bottom-Sheet стиль */
     @media (max-width: 768px) {
       .hud-container {
         top: auto;
@@ -278,18 +276,12 @@
         transform: none;
       }
 
-      .saas-card {
-        padding: 14px 16px;
-        border-radius: 18px;
-        gap: 10px;
-      }
-
       .target-title {
-        font-size: 1.3rem;
+        font-size: 1.35rem;
       }
 
       .toast-pill {
-        top: 20%;
+        top: 25%;
         transform: translate(-50%, 0);
       }
     }
@@ -297,7 +289,7 @@
 </head>
 <body>
 
-  <!-- Экран загрузки с динамическим прогрессом -->
+  <!-- Загрузчик -->
   <div id="loader" class="loader-screen">
     <div class="brand-title">
       <div class="brand-dot"></div>
@@ -306,12 +298,12 @@
     <div class="progress-bar-wrap">
       <div id="pBar" class="progress-bar-fill"></div>
     </div>
-    <div id="pText" class="loader-status">Определение конфигурации устройства...</div>
+    <div id="pText" class="loader-status">Инициализация планеты...</div>
   </div>
 
   <div id="globeViz"></div>
 
-  <!-- SaaS HUD -->
+  <!-- HUD панель -->
   <div class="hud-container">
     <div class="saas-card">
       <div class="card-header">
@@ -349,7 +341,6 @@
     </div>
   </div>
 
-  <!-- Минималистичный Toast -->
   <div id="toast" class="toast-pill">
     <span id="toastMsg" class="toast-txt">...</span>
     <button id="nextBtn" class="btn-next-round" style="display: none;" onclick="startNextRound()">Дальше →</button>
@@ -358,38 +349,40 @@
   <script>
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-    // --- ЗВУКОВОЙ ДВИЖОК ---
+    // --- ЗВУК ---
     let soundEnabled = true;
     let audioCtx = null;
 
     function playSound(type) {
       if (!soundEnabled) return;
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
 
-      if (type === 'win') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(440, now);
-        osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        osc.start(now);
-        osc.stop(now + 0.3);
-      } else {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(180, now);
-        osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-        osc.start(now);
-        osc.stop(now + 0.25);
-      }
+        if (type === 'win') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(180, now);
+          osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        }
+      } catch (e) {}
     }
 
     function toggleSound() {
@@ -397,7 +390,7 @@
       document.getElementById('soundBtn').innerText = soundEnabled ? '🔊 Звук' : '🔇 Звук';
     }
 
-    // --- ЛОКАЛИЗАЦИЯ И ДАННЫЕ ---
+    // --- ЛОГИКА И ПЕРЕВОД ---
     let allCountries = [];
     let pool = [];
     let targetCountry = null;
@@ -406,7 +399,7 @@
     let totalClicks = 0;
     let successClicks = 0;
     let isLocked = false;
-    let world;
+    let world = null;
 
     const regionNamesRu = new Intl.DisplayNames(['ru'], { type: 'region' });
     const manualRu = {
@@ -417,7 +410,7 @@
 
     function getRuName(feat) {
       const p = feat.properties;
-      const raw = p.NAME || p.ADMIN || p.NAME_LONG;
+      const raw = p.NAME || p.ADMIN || p.NAME_LONG || 'Страна';
       if (manualRu[raw]) return manualRu[raw];
       let code = p.ISO_A2 !== '-99' ? p.ISO_A2 : (p.ISO_A2_EH || p.WB_A2);
       if (code && code !== '-99') {
@@ -447,59 +440,59 @@
       return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
 
-    // --- ИНИЦИАЛИЗАЦИЯ С УЧЁТОМ УСТРОЙСТВА ---
+    // --- БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ 3D ---
     const pBar = document.getElementById('pBar');
     const pText = document.getElementById('pText');
 
-    pBar.style.width = '40%';
-    pText.innerText = isMobile ? 'Оптимизация текстур для смартфона...' : 'Загрузка шейдеров и атмосферы...';
+    try {
+      pBar.style.width = '40%';
+      pText.innerText = 'Создание 3D сцены...';
 
-    // Базовая конфигурация глобуса
-    world = Globe()(document.getElementById('globeViz'))
-      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-      .backgroundColor('#090d16')
-      .atmosphereColor('#38bdf8')
-      .atmosphereAltitude(isMobile ? 0.15 : 0.22)
-      .lineHoverPrecision(0)
-      .polygonAltitude(0.005)
-      .polygonCapColor(() => 'rgba(255, 255, 255, 0.04)')
-      .polygonSideColor(() => 'rgba(0, 0, 0, 0.2)')
-      .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.4)')
-      .polygonLabel(d => `<div style="background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-weight: 600; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-family: sans-serif;">${getRuName(d)}</div>`)
-      .onPolygonClick(handleSelection);
+      world = Globe()(document.getElementById('globeViz'))
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+        .backgroundColor('#090d16')
+        .atmosphereColor('#38bdf8')
+        .atmosphereAltitude(isMobile ? 0.15 : 0.22)
+        .lineHoverPrecision(0)
+        .polygonAltitude(0.005)
+        .polygonCapColor(() => 'rgba(255, 255, 255, 0.04)')
+        .polygonSideColor(() => 'rgba(0, 0, 0, 0.2)')
+        .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.4)')
+        .polygonLabel(d => `<div style="background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-weight: 600; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-family: sans-serif;">${getRuName(d)}</div>`)
+        .onPolygonClick(handleSelection);
 
-    // Ограничиваем DPR на мобилках для сохранения 60 FPS
-    world.renderer().setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
-
-    // На десктопе подключаем рельефный бамп и слой облаков
-    if (!isMobile) {
-      world.bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png');
-
-      const CLOUDS_IMG_URL = '//unpkg.com/three-globe/example/img/earth-clouds.png';
-      new THREE.TextureLoader().load(CLOUDS_IMG_URL, cloudsTexture => {
-        const clouds = new THREE.Mesh(
-          new THREE.SphereGeometry(world.getGlobeRadius() * 1.004, 64, 64),
-          new THREE.MeshPhongMaterial({ map: cloudsTexture, transparent: true, opacity: 0.35 })
-        );
-        world.scene().add(clouds);
-        (function anim() {
-          clouds.rotation.y += -0.006 * Math.PI / 180;
-          requestAnimationFrame(anim);
-        })();
-      });
+      // Безопасное подключение бампа только если десктоп
+      if (!isMobile) {
+        world.bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png');
+      }
+    } catch (err) {
+      console.error('Ошибка инициализации Globe:', err);
     }
 
-    // Загрузка GeoJSON карты
-    pBar.style.width = '75%';
-    pText.innerText = 'Загрузка векторных границ...';
+    // Загрузка GeoJSON через быстрый jsDelivr с резервом
+    pBar.style.width = '70%';
+    pText.innerText = 'Загрузка векторных карт...';
 
-    fetch('https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson')
-      .then(res => res.json())
+    const PRIMARY_GEOJSON = 'https://cdn.jsdelivr.net/gh/vasturiano/globe.gl@master/example/datasets/ne_110m_admin_0_countries.geojson';
+    const FALLBACK_GEOJSON = 'https://unpkg.com/three-globe/example/datasets/ne_110m_admin_0_countries.geojson';
+
+    function loadMapData(url) {
+      return fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        });
+    }
+
+    loadMapData(PRIMARY_GEOJSON)
+      .catch(() => loadMapData(FALLBACK_GEOJSON))
       .then(data => {
         allCountries = data.features.filter(d => (d.properties.NAME || d.properties.ADMIN) && d.properties.NAME !== 'Antarctica');
         pool = [...allCountries];
-        
-        world.polygonsData(allCountries);
+
+        if (world) {
+          world.polygonsData(allCountries);
+        }
 
         pBar.style.width = '100%';
         pText.innerText = 'Готово!';
@@ -510,11 +503,11 @@
         }, 300);
       })
       .catch(err => {
-        pText.innerText = 'Ошибка сети. Проверьте интернет.';
-        console.error(err);
+        pText.innerText = 'Ошибка загрузки карты. Перезагрузите страницу.';
+        console.error('Не удалось загрузить GeoJSON:', err);
       });
 
-    // --- ИГРОВОЙ ПРОЦЕСС ---
+    // --- ГЕЙМПЛЕЙ ---
     function changeRegion(reg) {
       if (reg === 'ALL') {
         pool = [...allCountries];
@@ -528,9 +521,12 @@
     function pickNewTarget() {
       isLocked = false;
       hideToast();
-      world.ringsData([]);
-      world.polygonCapColor(() => 'rgba(255, 255, 255, 0.04)');
+      if (world) {
+        world.ringsData([]);
+        world.polygonCapColor(() => 'rgba(255, 255, 255, 0.04)');
+      }
 
+      if (!pool.length) return;
       targetCountry = pool[Math.floor(Math.random() * pool.length)];
       document.getElementById('targetName').innerText = getRuName(targetCountry);
     }
@@ -546,4 +542,87 @@
     }
 
     function handleSelection(clicked) {
-      if (isLocked || !clicked || !targetCountry) ret
+      if (isLocked || !clicked || !targetCountry) return;
+
+      totalClicks++;
+      const clickedRu = getRuName(clicked);
+      const targetRu = getRuName(targetCountry);
+      const targetPos = getCenter(targetCountry);
+
+      if (clicked === targetCountry) {
+        isLocked = true;
+        successClicks++;
+        streak++;
+        score += 100 + (streak > 1 ? (streak - 1) * 20 : 0);
+        playSound('win');
+
+        if (world) {
+          world.polygonCapColor(d => d === clicked ? 'rgba(16, 185, 129, 0.75)' : 'rgba(255, 255, 255, 0.04)');
+        }
+        showToast(`Верно: ${targetRu}!`, 'success');
+
+        setTimeout(() => {
+          updateStats();
+          pickNewTarget();
+        }, 1400);
+
+      } else {
+        isLocked = true;
+        streak = 0;
+        playSound('error');
+
+        const clickedPos = getCenter(clicked);
+        const dist = getDistanceKm(clickedPos.lat, clickedPos.lng, targetPos.lat, targetPos.lng);
+
+        if (world) {
+          world.ringsData([{
+            lat: targetPos.lat,
+            lng: targetPos.lng,
+            maxR: isMobile ? 6 : 8,
+            propagationSpeed: 3.5,
+            repeatPeriod: 750
+          }])
+          .ringColor(() => '#f43f5e')
+          .ringMaxRadius('maxR')
+          .ringPropagationSpeed('propagationSpeed')
+          .ringRepeatPeriod('repeatPeriod');
+
+          world.polygonCapColor(d => d === targetCountry ? 'rgba(244, 63, 94, 0.6)' : 'rgba(255, 255, 255, 0.04)');
+          world.pointOfView({ lat: targetPos.lat, lng: targetPos.lng, altitude: isMobile ? 2.1 : 1.8 }, 1200);
+        }
+
+        showToast(`Это ${clickedRu}. До цели: ${dist.toLocaleString()} км.`, 'error', true);
+      }
+      updateStats();
+    }
+
+    function updateStats() {
+      document.getElementById('scoreVal').innerText = score;
+      document.getElementById('streakVal').innerText = `🔥 ${streak}`;
+      const acc = totalClicks > 0 ? Math.round((successClicks / totalClicks) * 100) : 100;
+      document.getElementById('accVal').innerText = `${acc}%`;
+    }
+
+    function showToast(msg, type, showBtn = false) {
+      const t = document.getElementById('toast');
+      const tm = document.getElementById('toastMsg');
+      const nb = document.getElementById('nextBtn');
+      tm.innerText = msg;
+      t.className = `toast-pill show ${type}`;
+      nb.style.display = showBtn ? 'inline-block' : 'none';
+    }
+
+    function hideToast() {
+      document.getElementById('toast').className = 'toast-pill';
+    }
+
+    function startNextRound() {
+      pickNewTarget();
+    }
+
+    window.addEventListener('resize', () => {
+      if (world) world.width(window.innerWidth).height(window.innerHeight);
+    });
+  </script>
+</body>
+</html>
