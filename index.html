@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>GeoGlobe — Minimalist SaaS Edition</title>
+  
+  <!-- Three.js & Globe.gl -->
+  <script src="//unpkg.com/three"></script>
+  <script src="//unpkg.com/globe.gl"></script>
+
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --text-main: #f8fafc;
+      --text-muted: #64748b;
+      --success: #10b981;
+      --danger: #f43f5e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+    }
+
+    #globeViz {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Загрузочный экран с прогресс-баром */
+    .loader-screen {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      gap: 16px;
+      transition: opacity 0.4s ease;
+    }
+
+    .loader-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .brand-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .progress-bar-wrap {
+      width: 200px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      width: 15%;
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .loader-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Десктопный HUD (плавающий сверху) */
+    .hud-container {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      width: calc(100% - 32px);
+      max-width: 440px;
+      pointer-events: none;
+    }
+
+    .saas-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 16px 20px;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      background: var(--accent-glow);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    .region-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: #94a3b8;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 8px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .target-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #fff;
+      line-height: 1.1;
+    }
+
+    .metrics-row {
+      display: flex;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      padding: 8px 14px;
+      border-radius: 12px;
+    }
+
+    .metric-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .metric-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: #cbd5e1;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    /* Оповещения / Toast */
+    .toast-pill {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      padding: 12px 20px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 90vw;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+
+    .toast-pill.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+      pointer-events: auto;
+    }
+
+    .toast-pill.success { border-color: var(--success); }
+    .toast-pill.error { border-color: var(--danger); }
+
+    .toast-txt {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .btn-next-round {
+      background: var(--accent);
+      color: #040812;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Мобильный Bottom-Sheet стиль */
+    @media (max-width: 768px) {
+      .hud-container {
+        top: auto;
+        bottom: calc(16px + env(safe-area-inset-bottom));
+        left: 16px;
+        right: 16px;
+        width: auto;
+        transform: none;
+      }
+
+      .saas-card {
+        padding: 14px 16px;
+        border-radius: 18px;
+        gap: 10px;
+      }
+
+      .target-title {
+        font-size: 1.3rem;
+      }
+
+      .toast-pill {
+        top: 20%;
+        transform: translate(-50%, 0);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Экран загрузки с динамическим прогрессом -->
+  <div id="loader" class="loader-screen">
+    <div class="brand-title">
+      <div class="brand-dot"></div>
+      GeoGlobe 3D
+    </div>
+    <div class="progress-bar-wrap">
+      <div id="pBar" class="progress-bar-fill"></div>
+    </div>
+    <div id="pText" class="loader-status">Определение конфигурации устройства...</div>
+  </div>
+
+  <div id="globeViz"></div>
+
+  <!-- SaaS HUD -->
+  <div class="hud-container">
+    <div class="saas-card">
+      <div class="card-header">
+        <span class="badge">Цель</span>
+        <select id="regionSelect" class="region-select" onchange="changeRegion(this.value)">
+          <option value="ALL">Весь мир 🌍</option>
+          <option value="Europe">Европа 🇪🇺</option>
+          <option value="Asia">Азия 🌏</option>
+          <option value="Africa">Африка 🌍</option>
+          <option value="Americas">Америка 🌎</option>
+        </select>
+      </div>
+
+      <div id="targetName" class="target-title">Загрузка...</div>
+
+      <div class="metrics-row">
+        <div class="metric-col">
+          <span class="metric-label">Очки</span>
+          <span id="scoreVal" class="metric-val">0</span>
+        </div>
+        <div class="metric-col">
+          <span class="metric-label">Серия</span>
+          <span id="streakVal" class="metric-val" style="color: #f59e0b;">🔥 0</span>
+        </div>
+        <div class="metric-col">
+          <span class="metric-label">Точность</span>
+          <span id="accVal" class="metric-val">100%</span>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn-secondary" onclick="skipCountry()">↻ Сменить страну</button>
+        <button class="btn-secondary" id="soundBtn" onclick="toggleSound()">🔊 Звук</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Минималистичный Toast -->
+  <div id="toast" class="toast-pill">
+    <span id="toastMsg" class="toast-txt">...</span>
+    <button id="nextBtn" class="btn-next-round" style="display: none;" onclick="startNextRound()">Дальше →</button>
+  </div>
+
+  <script>
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+    // --- ЗВУКОВОЙ ДВИЖОК ---
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'win') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundBtn').innerText = soundEnabled ? '🔊 Звук' : '🔇 Звук';
+    }
+
+    // --- ЛОКАЛИЗАЦИЯ И ДАННЫЕ ---
+    let allCountries = [];
+    let pool = [];
+    let targetCountry = null;
+    let score = 0;
+    let streak = 0;
+    let totalClicks = 0;
+    let successClicks = 0;
+    let isLocked = false;
+    let world;
+
+    const regionNamesRu = new Intl.DisplayNames(['ru'], { type: 'region' });
+    const manualRu = {
+      "France": "Франция", "Norway": "Норвегия", "Russia": "Россия",
+      "United States of America": "США", "Somaliland": "Сомалиленд",
+      "Kosovo": "Косово", "N. Cyprus": "Северный Кипр"
+    };
+
+    function getRuName(feat) {
+      const p = feat.properties;
+      const raw = p.NAME || p.ADMIN || p.NAME_LONG;
+      if (manualRu[raw]) return manualRu[raw];
+      let code = p.ISO_A2 !== '-99' ? p.ISO_A2 : (p.ISO_A2_EH || p.WB_A2);
+      if (code && code !== '-99') {
+        try { return regionNamesRu.of(code.toUpperCase()); } catch(e) {}
+      }
+      return raw;
+    }
+
+    function getCenter(feat) {
+      if (!feat.bbox) {
+        const c = feat.geometry.type === 'MultiPolygon' 
+          ? feat.geometry.coordinates[0][0][0] 
+          : feat.geometry.coordinates[0][0];
+        return { lat: c[1], lng: c[0] };
+      }
+      return {
+        lat: (feat.bbox[1] + feat.bbox[3]) / 2,
+        lng: (feat.bbox[0] + feat.bbox[2]) / 2
+      };
+    }
+
+    function getDistanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2)**2;
+      return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+
+    // --- ИНИЦИАЛИЗАЦИЯ С УЧЁТОМ УСТРОЙСТВА ---
+    const pBar = document.getElementById('pBar');
+    const pText = document.getElementById('pText');
+
+    pBar.style.width = '40%';
+    pText.innerText = isMobile ? 'Оптимизация текстур для смартфона...' : 'Загрузка шейдеров и атмосферы...';
+
+    // Базовая конфигурация глобуса
+    world = Globe()(document.getElementById('globeViz'))
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .backgroundColor('#090d16')
+      .atmosphereColor('#38bdf8')
+      .atmosphereAltitude(isMobile ? 0.15 : 0.22)
+      .lineHoverPrecision(0)
+      .polygonAltitude(0.005)
+      .polygonCapColor(() => 'rgba(255, 255, 255, 0.04)')
+      .polygonSideColor(() => 'rgba(0, 0, 0, 0.2)')
+      .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.4)')
+      .polygonLabel(d => `<div style="background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-weight: 600; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-family: sans-serif;">${getRuName(d)}</div>`)
+      .onPolygonClick(handleSelection);
+
+    // Ограничиваем DPR на мобилках для сохранения 60 FPS
+    world.renderer().setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+
+    // На десктопе подключаем рельефный бамп и слой облаков
+    if (!isMobile) {
+      world.bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png');
+
+      const CLOUDS_IMG_URL = '//unpkg.com/three-globe/example/img/earth-clouds.png';
+      new THREE.TextureLoader().load(CLOUDS_IMG_URL, cloudsTexture => {
+        const clouds = new THREE.Mesh(
+          new THREE.SphereGeometry(world.getGlobeRadius() * 1.004, 64, 64),
+          new THREE.MeshPhongMaterial({ map: cloudsTexture, transparent: true, opacity: 0.35 })
+        );
+        world.scene().add(clouds);
+        (function anim() {
+          clouds.rotation.y += -0.006 * Math.PI / 180;
+          requestAnimationFrame(anim);
+        })();
+      });
+    }
+
+    // Загрузка GeoJSON карты
+    pBar.style.width = '75%';
+    pText.innerText = 'Загрузка векторных границ...';
+
+    fetch('https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson')
+      .then(res => res.json())
+      .then(data => {
+        allCountries = data.features.filter(d => (d.properties.NAME || d.properties.ADMIN) && d.properties.NAME !== 'Antarctica');
+        pool = [...allCountries];
+        
+        world.polygonsData(allCountries);
+
+        pBar.style.width = '100%';
+        pText.innerText = 'Готово!';
+
+        setTimeout(() => {
+          document.getElementById('loader').classList.add('fade-out');
+          pickNewTarget();
+        }, 300);
+      })
+      .catch(err => {
+        pText.innerText = 'Ошибка сети. Проверьте интернет.';
+        console.error(err);
+      });
+
+    // --- ИГРОВОЙ ПРОЦЕСС ---
+    function changeRegion(reg) {
+      if (reg === 'ALL') {
+        pool = [...allCountries];
+      } else {
+        pool = allCountries.filter(d => d.properties.CONTINENT === reg || d.properties.REGION_UN === reg);
+        if (!pool.length) pool = [...allCountries];
+      }
+      pickNewTarget();
+    }
+
+    function pickNewTarget() {
+      isLocked = false;
+      hideToast();
+      world.ringsData([]);
+      world.polygonCapColor(() => 'rgba(255, 255, 255, 0.04)');
+
+      targetCountry = pool[Math.floor(Math.random() * pool.length)];
+      document.getElementById('targetName').innerText = getRuName(targetCountry);
+    }
+
+    function skipCountry() {
+      if (isLocked) {
+        startNextRound();
+        return;
+      }
+      streak = 0;
+      updateStats();
+      pickNewTarget();
+    }
+
+    function handleSelection(clicked) {
+      if (isLocked || !clicked || !targetCountry) ret
