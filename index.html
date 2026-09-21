@@ -5,37 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GeoGlobe 3D — Географический тренажёр</title>
 
-  <!-- Globe.gl автономный бандл -->
+  <!-- Автономный бандл Globe.gl -->
   <script src="https://unpkg.com/globe.gl" defer></script>
 
   <style>
     :root {
-      /* Поверхности */
-      --surface: #08090a;
-      --surface-1: #111317;
-      --surface-2: #1a1d24;
-      --surface-sunken: #0d0f12;
+      /* Светлая дизайн-система токенов */
+      --surface: #f1f5f9;
+      --surface-1: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-sunken: #f1f5f9;
 
-      /* Текст и контент */
-      --ink: #f4f5f7;
-      --ink-muted: #8b929e;
-      --ink-subtle: #575d69;
+      /* Текст и типографика */
+      --ink: #0f172a;
+      --ink-muted: #475569;
+      --ink-subtle: #94a3b8;
 
       /* Границы и разделители */
-      --hairline: #22262f;
-      --hairline-strong: #323846;
+      --hairline: #e2e8f0;
+      --hairline-strong: #cbd5e1;
 
-      /* Акценты */
-      --accent: #5e6ad2;
-      --accent-hover: #717de0;
-      --accent-soft: rgba(94, 106, 210, 0.12);
+      /* Акцентный цвет (Индиго) */
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+      --accent-soft: rgba(79, 70, 229, 0.08);
 
-      /* Семантические состояния */
-      --good: #4cb782;
-      --good-soft: rgba(76, 183, 130, 0.14);
-      --warn: #e2b203;
-      --bad: #eb5757;
-      --bad-soft: rgba(235, 87, 87, 0.14);
+      /* Семантические статусы */
+      --good: #059669;
+      --good-soft: rgba(5, 150, 105, 0.1);
+      --warn: #d97706;
+      --bad: #e11d48;
+      --bad-soft: rgba(225, 29, 72, 0.1);
 
       /* Шрифты */
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
@@ -112,16 +112,17 @@
     }
 
     .brand-status-dot {
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
       background: var(--accent);
       border-radius: 50%;
     }
 
     .progress-track {
       width: 200px;
-      height: 2px;
-      background: var(--hairline);
+      height: 3px;
+      background: var(--hairline-strong);
+      border-radius: 99px;
       overflow: hidden;
     }
 
@@ -154,14 +155,14 @@
 
     .hud-card {
       background: var(--surface-1);
-      border: 1px solid var(--hairline-strong);
+      border: 1px solid var(--hairline);
       border-radius: var(--r-lg);
       padding: 18px 20px;
       pointer-events: auto;
       display: flex;
       flex-direction: column;
       gap: 16px;
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
     }
 
     .card-top {
@@ -179,26 +180,25 @@
       letter-spacing: 0.08em;
       color: var(--accent);
       background: var(--accent-soft);
-      padding: 2px 8px;
+      padding: 3px 8px;
       border-radius: var(--r-sm);
     }
 
     .region-select {
       background: var(--surface-2);
-      border: 1px solid var(--hairline);
-      color: var(--ink-muted);
+      border: 1px solid var(--hairline-strong);
+      color: var(--ink);
       font-size: 12px;
       font-weight: 500;
-      padding: 4px 10px;
+      padding: 5px 10px;
       border-radius: var(--r-md);
       cursor: pointer;
       outline: none;
-      transition: border-color 120ms ease, color 120ms ease;
+      transition: border-color 120ms ease, background-color 120ms ease;
     }
 
     .region-select:hover {
-      border-color: var(--hairline-strong);
-      color: var(--ink);
+      border-color: var(--ink-muted);
     }
 
     .target-display {
@@ -216,8 +216,8 @@
     }
 
     .target-country-name {
-      font-size: 1.5rem;
-      font-weight: 600;
+      font-size: 1.55rem;
+      font-weight: 700;
       letter-spacing: -0.02em;
       color: var(--ink);
       line-height: 1.15;
@@ -251,14 +251,14 @@
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: var(--ink-subtle);
-      font-weight: 500;
+      color: var(--ink-muted);
+      font-weight: 600;
     }
 
     .metric-val {
       font-family: var(--font-mono);
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 15px;
+      font-weight: 700;
       color: var(--ink);
       font-variant-numeric: tabular-nums;
     }
@@ -277,11 +277,11 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      height: 36px;
+      height: 38px;
       padding: 0 14px;
       border-radius: var(--r-md);
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       border: 1px solid transparent;
       transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 80ms ease;
@@ -294,18 +294,18 @@
     .btn-secondary {
       flex: 1;
       background: var(--surface-2);
-      border-color: var(--hairline);
+      border-color: var(--hairline-strong);
       color: var(--ink-muted);
     }
 
     .btn-secondary:hover {
-      background: var(--hairline);
-      border-color: var(--hairline-strong);
+      background: #ffffff;
+      border-color: var(--ink-muted);
       color: var(--ink);
     }
 
     .btn-icon-only {
-      width: 36px;
+      width: 38px;
       padding: 0;
       flex: none;
     }
@@ -328,7 +328,7 @@
       transform: translateY(-4px);
       pointer-events: none;
       transition: opacity 140ms ease-out, transform 140ms ease-out;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.12);
     }
 
     .toast-panel.is-visible {
@@ -338,11 +338,11 @@
     }
 
     .toast-panel.is-good {
-      border-left: 3px solid var(--good);
+      border-left: 4px solid var(--good);
     }
 
     .toast-panel.is-bad {
-      border-left: 3px solid var(--bad);
+      border-left: 4px solid var(--bad);
     }
 
     .toast-message-wrap {
@@ -350,6 +350,7 @@
       align-items: center;
       gap: 8px;
       font-size: 13px;
+      font-weight: 500;
       color: var(--ink);
     }
 
@@ -364,10 +365,10 @@
     .btn-primary-sm {
       background: var(--accent);
       color: #ffffff;
-      height: 28px;
-      padding: 0 10px;
+      height: 30px;
+      padding: 0 12px;
       font-size: 12px;
-      font-weight: 500;
+      font-weight: 600;
       border-radius: var(--r-sm);
       border: none;
       cursor: pointer;
@@ -381,18 +382,6 @@
 
     .btn-primary-sm:active {
       transform: scale(0.98);
-    }
-
-    .visually-hidden {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -425,7 +414,7 @@
 </head>
 <body>
 
-  <!-- Загрузчик данных -->
+  <!-- Загрузчик -->
   <aside id="loader" class="loader-screen" aria-live="polite" aria-label="Экран загрузки">
     <div class="brand-mark">
       <span class="brand-status-dot" aria-hidden="true"></span>
@@ -434,17 +423,17 @@
     <div class="progress-track" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100">
       <div id="pBar" class="progress-bar"></div>
     </div>
-    <div id="pText" class="loader-label">Инициализация планеты</div>
+    <div id="pText" class="loader-label">Инициализация дневной карты…</div>
   </aside>
 
   <!-- 3D Планета -->
-  <main id="globeViz" aria-label="Интерактивная карта мира 3D"></main>
+  <main id="globeViz" aria-label="Интерактивная 3D карта Земли"></main>
 
-  <!-- Интерфейс управления игрой -->
+  <!-- HUD Интерфейс -->
   <header class="hud-layer">
     <section class="hud-card" aria-label="Игровая панель">
       <div class="card-top">
-        <span class="target-badge">Целевая локация</span>
+        <span class="target-badge">Целевая страна</span>
         <select id="regionSelect" class="region-select" aria-label="Фильтр региона">
           <option value="ALL">Весь мир</option>
           <option value="Europe">Европа</option>
@@ -456,7 +445,7 @@
       </div>
 
       <div class="target-display">
-        <span class="target-kicker">Найдите на глобусе</span>
+        <span class="target-kicker">Найдите на карте</span>
         <h1 id="targetName" class="target-country-name">Загрузка координат…</h1>
       </div>
 
@@ -477,18 +466,18 @@
 
       <div class="controls-strip">
         <button id="skipBtn" class="btn btn-secondary" type="button">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
           </svg>
           <span>Пропустить</span>
         </button>
 
         <button id="soundToggleBtn" class="btn btn-secondary btn-icon-only" type="button" aria-label="Выключить звук" title="Включить / выключить звук">
-          <svg id="soundIconOn" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg id="soundIconOn" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
           </svg>
-          <svg id="soundIconOff" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;" aria-hidden="true">
+          <svg id="soundIconOff" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;" aria-hidden="true">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
             <line x1="23" y1="9" x2="17" y2="15"></line>
             <line x1="17" y1="9" x2="23" y2="15"></line>
@@ -496,7 +485,7 @@
         </button>
       </div>
 
-      <!-- Toast уведомления -->
+      <!-- Toast уведомление -->
       <div id="toast" class="toast-panel" aria-live="polite">
         <div class="toast-message-wrap">
           <span id="toastIcon" class="toast-status-icon" aria-hidden="true"></span>
@@ -576,7 +565,7 @@
       }
     }
 
-    // --- ГЕОГРАФИЧЕСКИЙ СЛОВАРЬ И РАСЧЁТЫ ---
+    // --- ПЕРЕВОД И ГЕОМЕТРИЯ ---
     const regionNamesRu = new Intl.DisplayNames(['ru'], { type: 'region' });
     const manualDictionaryRu = {
       'United States of America': 'США',
@@ -646,35 +635,33 @@
     let successfulAttempts = 0;
     let isRoundLocked = false;
 
-    // --- ИНИЦИАЛИЗАЦИЯ 3D СЦЕНЫ ---
+    // --- ИНИЦИАЛИЗАЦИЯ 3D СЦЕНЫ (Светлая дневная тема) ---
     const progressBar = document.getElementById('pBar');
     const progressLabel = document.getElementById('pText');
     const isMobileDevice = window.innerWidth < 640 || /Android|iPhone|iPad/i.test(navigator.userAgent);
 
     function initializeGlobeEngine() {
       progressBar.style.width = '35%';
-      progressLabel.innerText = 'Создание 3D сцены…';
+      progressLabel.innerText = 'Создание дневной 3D сцены…';
 
       try {
         globeInstance = Globe()(document.getElementById('globeViz'))
-          .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-          .backgroundColor('#08090a')
-          .atmosphereColor('#5e6ad2')
+          // Высококачественная естественная дневная текстура Земли
+          .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-day.jpg')
+          .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+          .backgroundColor('#f1f5f9')
+          .atmosphereColor('#93c5fd')
           .atmosphereAltitude(isMobileDevice ? 0.12 : 0.18)
-          .polygonAltitude(0.005)
-          .polygonCapColor(() => 'rgba(255, 255, 255, 0.03)')
-          .polygonSideColor(() => 'rgba(0, 0, 0, 0.25)')
-          .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.25)')
+          .polygonAltitude(0.006)
+          .polygonCapColor(() => 'rgba(255, 255, 255, 0.01)')
+          .polygonSideColor(() => 'rgba(15, 23, 42, 0.15)')
+          .polygonStrokeColor(() => 'rgba(15, 23, 42, 0.45)')
           .polygonLabel(d => `
-            <div style="background: #111317; border: 1px solid #323846; color: #f4f5f7; font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 500; padding: 4px 8px; border-radius: 4px;">
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; color: #0f172a; font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
               ${resolveCountryNameRu(d)}
             </div>
           `)
           .onPolygonClick(handlePolygonClick);
-
-        if (!isMobileDevice) {
-          globeInstance.bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png');
-        }
       } catch (err) {
         progressLabel.innerText = 'Ошибка инициализации 3D';
         console.error('Globe init error:', err);
@@ -719,14 +706,14 @@
         });
     }
 
-    // --- ИГРОВАЯ ЛОГИКА ---
+    // --- ГЕЙМПЛЕЙ ---
     function selectNextTarget() {
       isRoundLocked = false;
       dismissToast();
 
       if (globeInstance) {
         globeInstance.ringsData([]);
-        globeInstance.polygonCapColor(() => 'rgba(255, 255, 255, 0.03)');
+        globeInstance.polygonCapColor(() => 'rgba(255, 255, 255, 0.01)');
       }
 
       if (!activeSelectionPool.length) return;
@@ -750,10 +737,10 @@
         playTone('success');
 
         if (globeInstance) {
-          globeInstance.polygonCapColor(d => d === clickedFeature ? 'rgba(76, 183, 130, 0.75)' : 'rgba(255, 255, 255, 0.03)');
+          globeInstance.polygonCapColor(d => d === clickedFeature ? 'rgba(5, 150, 105, 0.75)' : 'rgba(255, 255, 255, 0.01)');
         }
 
-        showToast(`Верно — ${targetRu}`, 'good');
+        showToast(`Верно — ${targetRu}!`, 'good');
         updateDashboardMetrics();
 
         setTimeout(() => {
@@ -776,12 +763,12 @@
             propagationSpeed: 3.2,
             repeatPeriod: 700
           }])
-          .ringColor(() => '#eb5757')
+          .ringColor(() => '#e11d48')
           .ringMaxRadius('maxR')
           .ringPropagationSpeed('propagationSpeed')
           .ringRepeatPeriod('repeatPeriod');
 
-          globeInstance.polygonCapColor(d => d === currentTarget ? 'rgba(235, 87, 87, 0.65)' : 'rgba(255, 255, 255, 0.03)');
+          globeInstance.polygonCapColor(d => d === currentTarget ? 'rgba(225, 29, 72, 0.65)' : 'rgba(255, 255, 255, 0.01)');
           globeInstance.pointOfView({ lat: targetCenter.lat, lng: targetCenter.lng, altitude: isMobileDevice ? 2.1 : 1.7 }, 1100);
         }
 
@@ -820,12 +807,12 @@
 
       if (status === 'good') {
         toastIcon.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>`;
       } else {
         toastIcon.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="8" x2="12" y2="12"></line>
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -839,7 +826,7 @@
       document.getElementById('toast').className = 'toast-panel';
     }
 
-    // --- НАВЕШИВАНИЕ СОБЫТИЙ ---
+    // --- СЛУШАТЕЛИ СОБЫТИЙ ---
     document.getElementById('regionSelect').addEventListener('change', (e) => {
       filterByRegion(e.target.value);
     });
@@ -863,7 +850,6 @@
       }
     });
 
-    // Запуск приложения
     window.addEventListener('DOMContentLoaded', () => {
       initializeGlobeEngine();
       loadVectorBoundaries();
