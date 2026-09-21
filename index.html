@@ -2,23 +2,49 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>GeoGlobe 3D</title>
-  
-  <!-- Только единый автономный бандл Globe.gl со строгим HTTPS -->
-  <script src="https://unpkg.com/globe.gl"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoGlobe 3D — Географический тренажёр</title>
+
+  <!-- Globe.gl автономный бандл -->
+  <script src="https://unpkg.com/globe.gl" defer></script>
 
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: rgba(15, 23, 42, 0.85);
-      --card-border: rgba(255, 255, 255, 0.1);
-      --accent: #38bdf8;
-      --accent-glow: rgba(56, 189, 248, 0.2);
-      --text-main: #f8fafc;
-      --text-muted: #64748b;
-      --success: #10b981;
-      --danger: #f43f5e;
+      /* Поверхности */
+      --surface: #08090a;
+      --surface-1: #111317;
+      --surface-2: #1a1d24;
+      --surface-sunken: #0d0f12;
+
+      /* Текст и контент */
+      --ink: #f4f5f7;
+      --ink-muted: #8b929e;
+      --ink-subtle: #575d69;
+
+      /* Границы и разделители */
+      --hairline: #22262f;
+      --hairline-strong: #323846;
+
+      /* Акценты */
+      --accent: #5e6ad2;
+      --accent-hover: #717de0;
+      --accent-soft: rgba(94, 106, 210, 0.12);
+
+      /* Семантические состояния */
+      --good: #4cb782;
+      --good-soft: rgba(76, 183, 130, 0.14);
+      --warn: #e2b203;
+      --bad: #eb5757;
+      --bad-soft: rgba(235, 87, 87, 0.14);
+
+      /* Шрифты */
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+
+      /* Скругления */
+      --r-sm: 4px;
+      --r-md: 6px;
+      --r-lg: 8px;
     }
 
     * {
@@ -30,13 +56,14 @@
     }
 
     body {
-      background-color: var(--bg);
-      color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+      background-color: var(--surface);
+      color: var(--ink);
+      font-family: var(--font-sans);
       overflow: hidden;
       width: 100vw;
       height: 100vh;
       touch-action: none;
+      -webkit-font-smoothing: antialiased;
     }
 
     #globeViz {
@@ -47,581 +74,799 @@
       z-index: 1;
     }
 
-    /* Экран загрузки */
+    /* Фокус-состояния для доступности */
+    button:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Экран инициализации */
     .loader-screen {
-      position: absolute;
+      position: fixed;
       inset: 0;
-      background: var(--bg);
+      background: var(--surface);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 50;
+      z-index: 100;
       gap: 16px;
-      transition: opacity 0.3s ease;
+      transition: opacity 250ms ease, visibility 250ms ease;
     }
 
-    .loader-screen.fade-out {
+    .loader-screen.is-hidden {
       opacity: 0;
+      visibility: hidden;
       pointer-events: none;
     }
 
-    .brand-title {
-      font-size: 1.25rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      color: #fff;
+    .brand-mark {
       display: flex;
       align-items: center;
       gap: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--ink);
     }
 
-    .brand-dot {
-      width: 8px;
-      height: 8px;
+    .brand-status-dot {
+      width: 6px;
+      height: 6px;
       background: var(--accent);
       border-radius: 50%;
-      box-shadow: 0 0 12px var(--accent);
     }
 
-    .progress-bar-wrap {
-      width: 180px;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 99px;
+    .progress-track {
+      width: 200px;
+      height: 2px;
+      background: var(--hairline);
       overflow: hidden;
     }
 
-    .progress-bar-fill {
-      width: 20%;
+    .progress-bar {
+      width: 10%;
       height: 100%;
       background: var(--accent);
-      transition: width 0.25s ease;
+      transition: width 200ms ease-out;
     }
 
-    .loader-status {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      font-weight: 500;
+    .loader-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
-    /* Адаптивный SaaS интерфейс */
-    .hud-container {
+    /* Главный HUD интерфейс */
+    .hud-layer {
       position: absolute;
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 10;
       width: calc(100% - 32px);
-      max-width: 420px;
+      max-width: 440px;
       pointer-events: none;
     }
 
-    .saas-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 16px 18px;
-      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+    .hud-card {
+      background: var(--surface-1);
+      border: 1px solid var(--hairline-strong);
+      border-radius: var(--r-lg);
+      padding: 18px 20px;
       pointer-events: auto;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
     }
 
-    .card-header {
+    .card-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
     }
 
-    .badge {
-      font-size: 0.7rem;
-      font-weight: 700;
+    .target-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--accent);
-      background: var(--accent-glow);
-      padding: 3px 8px;
-      border-radius: 6px;
-      border: 1px solid rgba(56, 189, 248, 0.2);
+      background: var(--accent-soft);
+      padding: 2px 8px;
+      border-radius: var(--r-sm);
     }
 
     .region-select {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--card-border);
-      color: #94a3b8;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 4px 8px;
-      border-radius: 8px;
-      outline: none;
+      background: var(--surface-2);
+      border: 1px solid var(--hairline);
+      color: var(--ink-muted);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: var(--r-md);
       cursor: pointer;
+      outline: none;
+      transition: border-color 120ms ease, color 120ms ease;
     }
 
-    .target-title {
-      font-size: 1.6rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      color: #fff;
-      line-height: 1.1;
+    .region-select:hover {
+      border-color: var(--hairline-strong);
+      color: var(--ink);
     }
 
-    .metrics-row {
-      display: flex;
-      justify-content: space-between;
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      padding: 8px 14px;
-      border-radius: 12px;
-    }
-
-    .metric-col {
+    .target-display {
       display: flex;
       flex-direction: column;
+      gap: 4px;
     }
 
-    .metric-label {
-      font-size: 0.65rem;
-      color: var(--text-muted);
+    .target-kicker {
+      font-family: var(--font-mono);
+      font-size: 11px;
       text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-subtle);
+    }
+
+    .target-country-name {
+      font-size: 1.5rem;
       font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      line-height: 1.15;
+    }
+
+    .metrics-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: var(--surface-sunken);
+      border: 1px solid var(--hairline);
+      border-radius: var(--r-md);
+      padding: 10px 14px;
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-item:not(:last-child) {
+      border-right: 1px solid var(--hairline);
+    }
+
+    .metric-item:not(:first-child) {
+      padding-left: 12px;
+    }
+
+    .metric-key {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-subtle);
+      font-weight: 500;
     }
 
     .metric-val {
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
     }
 
-    .card-actions {
+    .metric-val--streak {
+      color: var(--warn);
+    }
+
+    .controls-strip {
       display: flex;
       gap: 8px;
     }
 
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 36px;
+      padding: 0 14px;
+      border-radius: var(--r-md);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 80ms ease;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
     .btn-secondary {
       flex: 1;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--card-border);
-      color: #cbd5e1;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 8px 12px;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.15s;
+      background: var(--surface-2);
+      border-color: var(--hairline);
+      color: var(--ink-muted);
     }
 
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.12);
-      color: #fff;
+      background: var(--hairline);
+      border-color: var(--hairline-strong);
+      color: var(--ink);
     }
 
-    /* Мобильный Toast */
-    .toast-pill {
+    .btn-icon-only {
+      width: 36px;
+      padding: 0;
+      flex: none;
+    }
+
+    /* Всплывающее уведомление результата (Toast) */
+    .toast-panel {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0.9);
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--card-border);
-      padding: 12px 18px;
-      border-radius: 14px;
+      top: calc(100% + 12px);
+      left: 0;
+      right: 0;
+      background: var(--surface-1);
+      border: 1px solid var(--hairline-strong);
+      border-radius: var(--r-lg);
+      padding: 12px 14px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 12px;
-      z-index: 20;
       opacity: 0;
+      transform: translateY(-4px);
       pointer-events: none;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-      max-width: 90vw;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      transition: opacity 140ms ease-out, transform 140ms ease-out;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
     }
 
-    .toast-pill.show {
+    .toast-panel.is-visible {
       opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
+      transform: translateY(0);
       pointer-events: auto;
     }
 
-    .toast-pill.success { border-color: var(--success); }
-    .toast-pill.error { border-color: var(--danger); }
-
-    .toast-txt {
-      font-size: 0.85rem;
-      font-weight: 600;
+    .toast-panel.is-good {
+      border-left: 3px solid var(--good);
     }
 
-    .btn-next-round {
+    .toast-panel.is-bad {
+      border-left: 3px solid var(--bad);
+    }
+
+    .toast-message-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .toast-status-icon {
+      flex-shrink: 0;
+      display: inline-flex;
+    }
+
+    .toast-panel.is-good .toast-status-icon { color: var(--good); }
+    .toast-panel.is-bad .toast-status-icon { color: var(--bad); }
+
+    .btn-primary-sm {
       background: var(--accent);
-      color: #040812;
+      color: #ffffff;
+      height: 28px;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: var(--r-sm);
       border: none;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 0.75rem;
-      font-weight: 700;
       cursor: pointer;
+      flex-shrink: 0;
+      transition: background-color 120ms ease, transform 80ms ease;
     }
 
-    @media (max-width: 768px) {
-      .hud-container {
+    .btn-primary-sm:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-primary-sm:active {
+      transform: scale(0.98);
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hud-layer {
         top: auto;
-        bottom: calc(16px + env(safe-area-inset-bottom));
-        left: 16px;
-        right: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        left: 12px;
+        right: 12px;
         width: auto;
         transform: none;
       }
 
-      .target-title {
-        font-size: 1.35rem;
+      .target-country-name {
+        font-size: 1.3rem;
       }
 
-      .toast-pill {
-        top: 25%;
-        transform: translate(-50%, 0);
+      .toast-panel {
+        top: auto;
+        bottom: calc(100% + 10px);
       }
     }
   </style>
 </head>
 <body>
 
-  <!-- Загрузчик -->
-  <div id="loader" class="loader-screen">
-    <div class="brand-title">
-      <div class="brand-dot"></div>
-      GeoGlobe 3D
+  <!-- Загрузчик данных -->
+  <aside id="loader" class="loader-screen" aria-live="polite" aria-label="Экран загрузки">
+    <div class="brand-mark">
+      <span class="brand-status-dot" aria-hidden="true"></span>
+      <span>GeoGlobe 3D</span>
     </div>
-    <div class="progress-bar-wrap">
-      <div id="pBar" class="progress-bar-fill"></div>
+    <div class="progress-track" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100">
+      <div id="pBar" class="progress-bar"></div>
     </div>
-    <div id="pText" class="loader-status">Инициализация планеты...</div>
-  </div>
+    <div id="pText" class="loader-label">Инициализация планеты</div>
+  </aside>
 
-  <div id="globeViz"></div>
+  <!-- 3D Планета -->
+  <main id="globeViz" aria-label="Интерактивная карта мира 3D"></main>
 
-  <!-- HUD панель -->
-  <div class="hud-container">
-    <div class="saas-card">
-      <div class="card-header">
-        <span class="badge">Цель</span>
-        <select id="regionSelect" class="region-select" onchange="changeRegion(this.value)">
-          <option value="ALL">Весь мир 🌍</option>
-          <option value="Europe">Европа 🇪🇺</option>
-          <option value="Asia">Азия 🌏</option>
-          <option value="Africa">Африка 🌍</option>
-          <option value="Americas">Америка 🌎</option>
+  <!-- Интерфейс управления игрой -->
+  <header class="hud-layer">
+    <section class="hud-card" aria-label="Игровая панель">
+      <div class="card-top">
+        <span class="target-badge">Целевая локация</span>
+        <select id="regionSelect" class="region-select" aria-label="Фильтр региона">
+          <option value="ALL">Весь мир</option>
+          <option value="Europe">Европа</option>
+          <option value="Asia">Азия</option>
+          <option value="Africa">Африка</option>
+          <option value="Americas">Северная и Южная Америка</option>
+          <option value="Oceania">Океания</option>
         </select>
       </div>
 
-      <div id="targetName" class="target-title">Загрузка...</div>
+      <div class="target-display">
+        <span class="target-kicker">Найдите на глобусе</span>
+        <h1 id="targetName" class="target-country-name">Загрузка координат…</h1>
+      </div>
 
-      <div class="metrics-row">
-        <div class="metric-col">
-          <span class="metric-label">Очки</span>
+      <div class="metrics-strip">
+        <div class="metric-item">
+          <span class="metric-key">Очки</span>
           <span id="scoreVal" class="metric-val">0</span>
         </div>
-        <div class="metric-col">
-          <span class="metric-label">Серия</span>
-          <span id="streakVal" class="metric-val" style="color: #f59e0b;">🔥 0</span>
+        <div class="metric-item">
+          <span class="metric-key">Серия</span>
+          <span id="streakVal" class="metric-val metric-val--streak">0</span>
         </div>
-        <div class="metric-col">
-          <span class="metric-label">Точность</span>
+        <div class="metric-item">
+          <span class="metric-key">Точность</span>
           <span id="accVal" class="metric-val">100%</span>
         </div>
       </div>
 
-      <div class="card-actions">
-        <button class="btn-secondary" onclick="skipCountry()">↻ Сменить страну</button>
-        <button class="btn-secondary" id="soundBtn" onclick="toggleSound()">🔊 Звук</button>
-      </div>
-    </div>
-  </div>
+      <div class="controls-strip">
+        <button id="skipBtn" class="btn btn-secondary" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span>Пропустить</span>
+        </button>
 
-  <div id="toast" class="toast-pill">
-    <span id="toastMsg" class="toast-txt">...</span>
-    <button id="nextBtn" class="btn-next-round" style="display: none;" onclick="startNextRound()">Дальше →</button>
-  </div>
+        <button id="soundToggleBtn" class="btn btn-secondary btn-icon-only" type="button" aria-label="Выключить звук" title="Включить / выключить звук">
+          <svg id="soundIconOn" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg id="soundIconOff" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Toast уведомления -->
+      <div id="toast" class="toast-panel" aria-live="polite">
+        <div class="toast-message-wrap">
+          <span id="toastIcon" class="toast-status-icon" aria-hidden="true"></span>
+          <span id="toastMsg">Готово</span>
+        </div>
+        <button id="nextRoundBtn" class="btn-primary-sm" style="display: none;" type="button">Далее</button>
+      </div>
+    </section>
+  </header>
 
   <script>
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+    'use strict';
 
-    // --- ЗВУК ---
+    // --- ЗВУКОВОЙ МОДУЛЬ (Web Audio API) ---
     let soundEnabled = true;
-    let audioCtx = null;
+    let audioContext = null;
 
-    function playSound(type) {
+    function initAudioContext() {
+      if (!audioContext) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) audioContext = new AudioCtx();
+      }
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+    }
+
+    function playTone(type) {
       if (!soundEnabled) return;
+      initAudioContext();
+      if (!audioContext) return;
+
       try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioContext.currentTime;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
 
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(audioContext.destination);
 
-        if (type === 'win') {
+        if (type === 'success') {
           osc.type = 'triangle';
-          osc.frequency.setValueAtTime(440, now);
-          osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
-          gain.gain.setValueAtTime(0.2, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-          osc.start(now);
-          osc.stop(now + 0.3);
-        } else {
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(180, now);
-          osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
-          gain.gain.setValueAtTime(0.2, now);
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+          gain.gain.setValueAtTime(0.12, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
           osc.start(now);
           osc.stop(now + 0.25);
+        } else {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(190, now);
+          osc.frequency.exponentialRampToValueAtTime(85, now + 0.18);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+          osc.start(now);
+          osc.stop(now + 0.22);
         }
-      } catch (e) {}
+      } catch (err) {
+        console.error('Audio playback error:', err);
+      }
     }
 
     function toggleSound() {
       soundEnabled = !soundEnabled;
-      document.getElementById('soundBtn').innerText = soundEnabled ? '🔊 Звук' : '🔇 Звук';
+      const soundBtn = document.getElementById('soundToggleBtn');
+      const iconOn = document.getElementById('soundIconOn');
+      const iconOff = document.getElementById('soundIconOff');
+
+      if (soundEnabled) {
+        iconOn.style.display = 'inline';
+        iconOff.style.display = 'none';
+        soundBtn.setAttribute('aria-label', 'Выключить звук');
+      } else {
+        iconOn.style.display = 'none';
+        iconOff.style.display = 'inline';
+        soundBtn.setAttribute('aria-label', 'Включить звук');
+      }
     }
 
-    // --- ЛОГИКА И ПЕРЕВОД ---
-    let allCountries = [];
-    let pool = [];
-    let targetCountry = null;
-    let score = 0;
-    let streak = 0;
-    let totalClicks = 0;
-    let successClicks = 0;
-    let isLocked = false;
-    let world = null;
-
+    // --- ГЕОГРАФИЧЕСКИЙ СЛОВАРЬ И РАСЧЁТЫ ---
     const regionNamesRu = new Intl.DisplayNames(['ru'], { type: 'region' });
-    const manualRu = {
-      "France": "Франция", "Norway": "Норвегия", "Russia": "Россия",
-      "United States of America": "США", "Somaliland": "Сомалиленд",
-      "Kosovo": "Косово", "N. Cyprus": "Северный Кипр"
+    const manualDictionaryRu = {
+      'United States of America': 'США',
+      'France': 'Франция',
+      'Norway': 'Норвегия',
+      'Russia': 'Россия',
+      'Somaliland': 'Сомалиленд',
+      'Kosovo': 'Косово',
+      'N. Cyprus': 'Северный Кипр',
+      'South Korea': 'Южная Корея',
+      'North Korea': 'Северная Корея',
+      'United Kingdom': 'Великобритания',
+      'Dem. Rep. Congo': 'ДР Конго',
+      'Dominican Rep.': 'Доминиканская Республика',
+      'Central African Rep.': 'ЦАР',
+      'Eq. Guinea': 'Экваториальная Гвинея',
+      'eSwatini': 'Эсватини',
+      'Bosnia and Herz.': 'Босния и Герцеговина'
     };
 
-    function getRuName(feat) {
-      const p = feat.properties;
-      const raw = p.NAME || p.ADMIN || p.NAME_LONG || 'Страна';
-      if (manualRu[raw]) return manualRu[raw];
-      let code = p.ISO_A2 !== '-99' ? p.ISO_A2 : (p.ISO_A2_EH || p.WB_A2);
-      if (code && code !== '-99') {
-        try { return regionNamesRu.of(code.toUpperCase()); } catch(e) {}
+    function resolveCountryNameRu(feature) {
+      const p = feature.properties;
+      const raw = p.NAME || p.ADMIN || p.NAME_LONG || 'Неизвестная территория';
+      if (manualDictionaryRu[raw]) return manualDictionaryRu[raw];
+
+      const isoCode = (p.ISO_A2 && p.ISO_A2 !== '-99') ? p.ISO_A2 : (p.ISO_A2_EH || p.WB_A2);
+      if (isoCode && isoCode !== '-99') {
+        try {
+          return regionNamesRu.of(isoCode.toUpperCase());
+        } catch (e) {}
       }
       return raw;
     }
 
-    function getCenter(feat) {
-      if (!feat.bbox) {
-        const c = feat.geometry.type === 'MultiPolygon' 
-          ? feat.geometry.coordinates[0][0][0] 
-          : feat.geometry.coordinates[0][0];
-        return { lat: c[1], lng: c[0] };
+    function calculateCentroid(feature) {
+      if (feature.bbox && feature.bbox.length === 4) {
+        return {
+          lat: (feature.bbox[1] + feature.bbox[3]) / 2,
+          lng: (feature.bbox[0] + feature.bbox[2]) / 2
+        };
       }
-      return {
-        lat: (feat.bbox[1] + feat.bbox[3]) / 2,
-        lng: (feat.bbox[0] + feat.bbox[2]) / 2
-      };
+      const coords = feature.geometry.type === 'MultiPolygon'
+        ? feature.geometry.coordinates[0][0][0]
+        : feature.geometry.coordinates[0][0];
+      return { lat: coords[1], lng: coords[0] };
     }
 
-    function getDistanceKm(lat1, lon1, lat2, lon2) {
+    function calculateDistanceKm(lat1, lon1, lat2, lon2) {
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2)**2;
-      return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
     }
 
-    // --- БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ 3D ---
-    const pBar = document.getElementById('pBar');
-    const pText = document.getElementById('pText');
+    // --- СОСТОЯНИЕ ИГРЫ ---
+    let globeInstance = null;
+    let masterCountryList = [];
+    let activeSelectionPool = [];
+    let currentTarget = null;
+    let score = 0;
+    let streak = 0;
+    let totalAttempts = 0;
+    let successfulAttempts = 0;
+    let isRoundLocked = false;
 
-    try {
-      pBar.style.width = '40%';
-      pText.innerText = 'Создание 3D сцены...';
+    // --- ИНИЦИАЛИЗАЦИЯ 3D СЦЕНЫ ---
+    const progressBar = document.getElementById('pBar');
+    const progressLabel = document.getElementById('pText');
+    const isMobileDevice = window.innerWidth < 640 || /Android|iPhone|iPad/i.test(navigator.userAgent);
 
-      world = Globe()(document.getElementById('globeViz'))
-        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-        .backgroundColor('#090d16')
-        .atmosphereColor('#38bdf8')
-        .atmosphereAltitude(isMobile ? 0.15 : 0.22)
-        .lineHoverPrecision(0)
-        .polygonAltitude(0.005)
-        .polygonCapColor(() => 'rgba(255, 255, 255, 0.04)')
-        .polygonSideColor(() => 'rgba(0, 0, 0, 0.2)')
-        .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.4)')
-        .polygonLabel(d => `<div style="background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-weight: 600; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-family: sans-serif;">${getRuName(d)}</div>`)
-        .onPolygonClick(handleSelection);
+    function initializeGlobeEngine() {
+      progressBar.style.width = '35%';
+      progressLabel.innerText = 'Создание 3D сцены…';
 
-      // Безопасное подключение бампа только если десктоп
-      if (!isMobile) {
-        world.bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png');
+      try {
+        globeInstance = Globe()(document.getElementById('globeViz'))
+          .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+          .backgroundColor('#08090a')
+          .atmosphereColor('#5e6ad2')
+          .atmosphereAltitude(isMobileDevice ? 0.12 : 0.18)
+          .polygonAltitude(0.005)
+          .polygonCapColor(() => 'rgba(255, 255, 255, 0.03)')
+          .polygonSideColor(() => 'rgba(0, 0, 0, 0.25)')
+          .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.25)')
+          .polygonLabel(d => `
+            <div style="background: #111317; border: 1px solid #323846; color: #f4f5f7; font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 500; padding: 4px 8px; border-radius: 4px;">
+              ${resolveCountryNameRu(d)}
+            </div>
+          `)
+          .onPolygonClick(handlePolygonClick);
+
+        if (!isMobileDevice) {
+          globeInstance.bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png');
+        }
+      } catch (err) {
+        progressLabel.innerText = 'Ошибка инициализации 3D';
+        console.error('Globe init error:', err);
       }
-    } catch (err) {
-      console.error('Ошибка инициализации Globe:', err);
     }
 
-    // Загрузка GeoJSON через быстрый jsDelivr с резервом
-    pBar.style.width = '70%';
-    pText.innerText = 'Загрузка векторных карт...';
+    function loadVectorBoundaries() {
+      progressBar.style.width = '70%';
+      progressLabel.innerText = 'Загрузка векторных границ…';
 
-    const PRIMARY_GEOJSON = 'https://cdn.jsdelivr.net/gh/vasturiano/globe.gl@master/example/datasets/ne_110m_admin_0_countries.geojson';
-    const FALLBACK_GEOJSON = 'https://unpkg.com/three-globe/example/datasets/ne_110m_admin_0_countries.geojson';
+      const PRIMARY_URL = 'https://cdn.jsdelivr.net/gh/vasturiano/globe.gl@master/example/datasets/ne_110m_admin_0_countries.geojson';
+      const FALLBACK_URL = 'https://unpkg.com/three-globe/example/datasets/ne_110m_admin_0_countries.geojson';
 
-    function loadMapData(url) {
-      return fetch(url)
-        .then(res => {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
+      fetch(PRIMARY_URL)
+        .catch(() => fetch(FALLBACK_URL))
+        .then(response => {
+          if (!response.ok) throw new Error('Network error ' + response.status);
+          return response.json();
+        })
+        .then(data => {
+          masterCountryList = data.features.filter(feat =>
+            (feat.properties.NAME || feat.properties.ADMIN) &&
+            feat.properties.NAME !== 'Antarctica'
+          );
+          activeSelectionPool = [...masterCountryList];
+
+          if (globeInstance) {
+            globeInstance.polygonsData(masterCountryList);
+          }
+
+          progressBar.style.width = '100%';
+          progressLabel.innerText = 'Готово';
+
+          setTimeout(() => {
+            document.getElementById('loader').classList.add('is-hidden');
+            selectNextTarget();
+          }, 240);
+        })
+        .catch(err => {
+          progressLabel.innerText = 'Не удалось загрузить карту. Обновите страницу.';
+          console.error('GeoJSON loading error:', err);
         });
     }
 
-    loadMapData(PRIMARY_GEOJSON)
-      .catch(() => loadMapData(FALLBACK_GEOJSON))
-      .then(data => {
-        allCountries = data.features.filter(d => (d.properties.NAME || d.properties.ADMIN) && d.properties.NAME !== 'Antarctica');
-        pool = [...allCountries];
+    // --- ИГРОВАЯ ЛОГИКА ---
+    function selectNextTarget() {
+      isRoundLocked = false;
+      dismissToast();
 
-        if (world) {
-          world.polygonsData(allCountries);
-        }
-
-        pBar.style.width = '100%';
-        pText.innerText = 'Готово!';
-
-        setTimeout(() => {
-          document.getElementById('loader').classList.add('fade-out');
-          pickNewTarget();
-        }, 300);
-      })
-      .catch(err => {
-        pText.innerText = 'Ошибка загрузки карты. Перезагрузите страницу.';
-        console.error('Не удалось загрузить GeoJSON:', err);
-      });
-
-    // --- ГЕЙМПЛЕЙ ---
-    function changeRegion(reg) {
-      if (reg === 'ALL') {
-        pool = [...allCountries];
-      } else {
-        pool = allCountries.filter(d => d.properties.CONTINENT === reg || d.properties.REGION_UN === reg);
-        if (!pool.length) pool = [...allCountries];
-      }
-      pickNewTarget();
-    }
-
-    function pickNewTarget() {
-      isLocked = false;
-      hideToast();
-      if (world) {
-        world.ringsData([]);
-        world.polygonCapColor(() => 'rgba(255, 255, 255, 0.04)');
+      if (globeInstance) {
+        globeInstance.ringsData([]);
+        globeInstance.polygonCapColor(() => 'rgba(255, 255, 255, 0.03)');
       }
 
-      if (!pool.length) return;
-      targetCountry = pool[Math.floor(Math.random() * pool.length)];
-      document.getElementById('targetName').innerText = getRuName(targetCountry);
+      if (!activeSelectionPool.length) return;
+      currentTarget = activeSelectionPool[Math.floor(Math.random() * activeSelectionPool.length)];
+      document.getElementById('targetName').innerText = resolveCountryNameRu(currentTarget);
     }
 
-    function skipCountry() {
-      if (isLocked) {
-        startNextRound();
-        return;
-      }
-      streak = 0;
-      updateStats();
-      pickNewTarget();
-    }
+    function handlePolygonClick(clickedFeature) {
+      if (isRoundLocked || !clickedFeature || !currentTarget) return;
 
-    function handleSelection(clicked) {
-      if (isLocked || !clicked || !targetCountry) return;
+      totalAttempts++;
+      const clickedRu = resolveCountryNameRu(clickedFeature);
+      const targetRu = resolveCountryNameRu(currentTarget);
+      const targetCenter = calculateCentroid(currentTarget);
 
-      totalClicks++;
-      const clickedRu = getRuName(clicked);
-      const targetRu = getRuName(targetCountry);
-      const targetPos = getCenter(targetCountry);
-
-      if (clicked === targetCountry) {
-        isLocked = true;
-        successClicks++;
+      if (clickedFeature === currentTarget) {
+        isRoundLocked = true;
+        successfulAttempts++;
         streak++;
-        score += 100 + (streak > 1 ? (streak - 1) * 20 : 0);
-        playSound('win');
+        score += 100 + (streak > 1 ? (streak - 1) * 25 : 0);
+        playTone('success');
 
-        if (world) {
-          world.polygonCapColor(d => d === clicked ? 'rgba(16, 185, 129, 0.75)' : 'rgba(255, 255, 255, 0.04)');
+        if (globeInstance) {
+          globeInstance.polygonCapColor(d => d === clickedFeature ? 'rgba(76, 183, 130, 0.75)' : 'rgba(255, 255, 255, 0.03)');
         }
-        showToast(`Верно: ${targetRu}!`, 'success');
+
+        showToast(`Верно — ${targetRu}`, 'good');
+        updateDashboardMetrics();
 
         setTimeout(() => {
-          updateStats();
-          pickNewTarget();
-        }, 1400);
+          selectNextTarget();
+        }, 1200);
 
       } else {
-        isLocked = true;
+        isRoundLocked = true;
         streak = 0;
-        playSound('error');
+        playTone('error');
 
-        const clickedPos = getCenter(clicked);
-        const dist = getDistanceKm(clickedPos.lat, clickedPos.lng, targetPos.lat, targetPos.lng);
+        const clickedCenter = calculateCentroid(clickedFeature);
+        const distKm = calculateDistanceKm(clickedCenter.lat, clickedCenter.lng, targetCenter.lat, targetCenter.lng);
 
-        if (world) {
-          world.ringsData([{
-            lat: targetPos.lat,
-            lng: targetPos.lng,
-            maxR: isMobile ? 6 : 8,
-            propagationSpeed: 3.5,
-            repeatPeriod: 750
+        if (globeInstance) {
+          globeInstance.ringsData([{
+            lat: targetCenter.lat,
+            lng: targetCenter.lng,
+            maxR: isMobileDevice ? 5 : 7,
+            propagationSpeed: 3.2,
+            repeatPeriod: 700
           }])
-          .ringColor(() => '#f43f5e')
+          .ringColor(() => '#eb5757')
           .ringMaxRadius('maxR')
           .ringPropagationSpeed('propagationSpeed')
           .ringRepeatPeriod('repeatPeriod');
 
-          world.polygonCapColor(d => d === targetCountry ? 'rgba(244, 63, 94, 0.6)' : 'rgba(255, 255, 255, 0.04)');
-          world.pointOfView({ lat: targetPos.lat, lng: targetPos.lng, altitude: isMobile ? 2.1 : 1.8 }, 1200);
+          globeInstance.polygonCapColor(d => d === currentTarget ? 'rgba(235, 87, 87, 0.65)' : 'rgba(255, 255, 255, 0.03)');
+          globeInstance.pointOfView({ lat: targetCenter.lat, lng: targetCenter.lng, altitude: isMobileDevice ? 2.1 : 1.7 }, 1100);
         }
 
-        showToast(`Это ${clickedRu}. До цели: ${dist.toLocaleString()} км.`, 'error', true);
+        showToast(`Вы выбрали: ${clickedRu}. До цели: ${distKm.toLocaleString('ru-RU')} км`, 'bad', true);
+        updateDashboardMetrics();
       }
-      updateStats();
     }
 
-    function updateStats() {
+    function updateDashboardMetrics() {
       document.getElementById('scoreVal').innerText = score;
-      document.getElementById('streakVal').innerText = `🔥 ${streak}`;
-      const acc = totalClicks > 0 ? Math.round((successClicks / totalClicks) * 100) : 100;
-      document.getElementById('accVal').innerText = `${acc}%`;
+      document.getElementById('streakVal').innerText = streak;
+      const accuracy = totalAttempts > 0 ? Math.round((successfulAttempts / totalAttempts) * 100) : 100;
+      document.getElementById('accVal').innerText = `${accuracy}%`;
     }
 
-    function showToast(msg, type, showBtn = false) {
-      const t = document.getElementById('toast');
-      const tm = document.getElementById('toastMsg');
-      const nb = document.getElementById('nextBtn');
-      tm.innerText = msg;
-      t.className = `toast-pill show ${type}`;
-      nb.style.display = showBtn ? 'inline-block' : 'none';
+    function filterByRegion(regionCode) {
+      if (regionCode === 'ALL') {
+        activeSelectionPool = [...masterCountryList];
+      } else {
+        activeSelectionPool = masterCountryList.filter(d =>
+          d.properties.CONTINENT === regionCode || d.properties.REGION_UN === regionCode
+        );
+        if (!activeSelectionPool.length) activeSelectionPool = [...masterCountryList];
+      }
+      selectNextTarget();
     }
 
-    function hideToast() {
-      document.getElementById('toast').className = 'toast-pill';
+    function showToast(text, status, showNextAction = false) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+      const nextBtn = document.getElementById('nextRoundBtn');
+
+      toastMsg.innerText = text;
+      toast.className = `toast-panel is-visible is-${status}`;
+
+      if (status === 'good') {
+        toastIcon.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>`;
+      } else {
+        toastIcon.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>`;
+      }
+
+      nextBtn.style.display = showNextAction ? 'inline-flex' : 'none';
     }
 
-    function startNextRound() {
-      pickNewTarget();
+    function dismissToast() {
+      document.getElementById('toast').className = 'toast-panel';
     }
+
+    // --- НАВЕШИВАНИЕ СОБЫТИЙ ---
+    document.getElementById('regionSelect').addEventListener('change', (e) => {
+      filterByRegion(e.target.value);
+    });
+
+    document.getElementById('skipBtn').addEventListener('click', () => {
+      if (isRoundLocked) {
+        selectNextTarget();
+        return;
+      }
+      streak = 0;
+      updateDashboardMetrics();
+      selectNextTarget();
+    });
+
+    document.getElementById('soundToggleBtn').addEventListener('click', toggleSound);
+    document.getElementById('nextRoundBtn').addEventListener('click', selectNextTarget);
 
     window.addEventListener('resize', () => {
-      if (world) world.width(window.innerWidth).height(window.innerHeight);
+      if (globeInstance) {
+        globeInstance.width(window.innerWidth).height(window.innerHeight);
+      }
+    });
+
+    // Запуск приложения
+    window.addEventListener('DOMContentLoaded', () => {
+      initializeGlobeEngine();
+      loadVectorBoundaries();
     });
   </script>
 </body>
